@@ -1,4 +1,4 @@
-# Pimp your EKS on Fargate
+# Pimp your EKS cluster on Fargate
 
 - [Introduction](#Introduction)
 - [Prerequisites](#Prerequisites)
@@ -72,8 +72,7 @@ fargateProfiles:
       - namespace: kube-system
 ```
 
-To create our cluster and the profiles we use the eksctl tool as
-follows:
+To create our cluster and the profiles we use the eksctl tool as follows:
 
 ```sh
 eksctl create cluster -f cluster.yaml
@@ -391,8 +390,7 @@ Deploy the ALB Ingress Controller with the following command:
 kubectl apply -f alb-ingress-controller.yaml
 ```
 
-Verify that the alb-ingress-controller is running and there are no
-errors in logs:
+Verify that the alb-ingress-controller is running and there are no errors in logs:
 
 ```sh
 kubectl get pods -n kube-system | grep alb-ingress-controller
