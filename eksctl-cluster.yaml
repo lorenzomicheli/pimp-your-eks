@@ -1,0 +1,23 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: eksfarg
+  region: eu-west-1
+
+vpc:
+  subnets:
+    private:
+      eu-west-1a: { id: subnet-0c6570c1ae7f621ea }
+      eu-west-1b: { id: subnet-0284013203ae652a8 }
+    public:
+      eu-west-1a: { id: subnet-028a621191857c71c }
+      eu-west-1b: { id: subnet-086f086833487ae66 } 
+
+fargateProfiles:
+  - name: default
+    selectors:
+      - namespace: default
+  - name: kube-system
+    selectors:
+      - namespace: kube-system

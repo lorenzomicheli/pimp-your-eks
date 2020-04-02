@@ -1,0 +1,40 @@
+replicas: 1
+
+persistence:
+  enabled: true
+  existingClaim: grafana-efs
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+    - 
+      name: Prometheus
+      type: prometheus
+      url: http://prometheus-server.prometheus.svc.cluster.local
+      access: proxy
+      isDefault: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+    - name: 'default'
+      orgId: 1
+      folder: ''
+      type: file
+      disableDeletion: false
+      editable: true
+      options:
+        path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    kube:
+      gnetId: 8588
+      revision: 1
+      datasource: Prometheus
+    prometheus-stats:
+      gnetId: 2
+      revision: 2
+      datasource: Prometheus

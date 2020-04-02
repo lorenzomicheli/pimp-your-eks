@@ -1,0 +1,9 @@
+alertmanager:
+  persistentVolume:
+    enabled: true
+    existingClaim: prometheus-efs
+
+server:
+  persistentVolume:
+    enabled: true
+    existingClaim: prometheus-efs

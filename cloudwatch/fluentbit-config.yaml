@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluentbit-config
+data:
+  # Configuration files: server, input, filters and output
+  # ======================================================
+  fluent-bit.conf: |
+    [INPUT]
+        Name              tail
+        Tag               *.logs
+        Path              /var/log/*.log
+        DB                /var/log/logs.db
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+        Refresh_Interval  10
+    [OUTPUT]
+        Name              cloudwatch
+        Match             *
+        region            eu-west-1
+        log_group_name    eksfarg-app
+        log_stream_prefix count
+        auto_create_group true

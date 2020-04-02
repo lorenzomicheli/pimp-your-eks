@@ -1182,7 +1182,7 @@ kubectl create namespace grafana
 
 Then you will need to create another EFS filesystem and deploy another EFS Provisioner to mount the new filesystem.
 
-Follow the configuration steps in the Prometheus section described in the **EFS Configuration** section and **EFS-Provisioner** section replacing every occurrence of the string "`prometheus`" with "`grafana`" in both YAML files and command lines. Create and apply `prometheus-efs-manifest.yaml` and `prometheus-efs-deployment.yaml` using the grafana namespace and the grafana EFS.
+Follow the configuration steps in the Prometheus section described in the **EFS Configuration** section and **EFS-Provisioner** section replacing every occurrence of the string "`prometheus`" with "`grafana`" in both YAML files and command lines. Create and apply `grafana-efs-manifest.yaml` and `grafana-efs-deployment.yaml` using the grafana namespace and the grafana EFS.
 
 Create a `grafana-config.yaml` file to configure the datasource and add a couple of dashboards:
 
