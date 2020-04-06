@@ -84,9 +84,7 @@
     },
     {
       "Effect": "Allow",
-      "Action": [
-        "cognito-idp:DescribeUserPoolClient"
-      ],
+      "Action": ["cognito-idp:DescribeUserPoolClient"],
       "Resource": "*"
     },
     {
@@ -101,17 +99,12 @@
     },
     {
       "Effect": "Allow",
-      "Action": [
-        "tag:GetResources",
-        "tag:TagResources"
-      ],
+      "Action": ["tag:GetResources", "tag:TagResources"],
       "Resource": "*"
     },
     {
       "Effect": "Allow",
-      "Action": [
-        "waf:GetWebACL"
-      ],
+      "Action": ["waf:GetWebACL"],
       "Resource": "*"
     },
     {

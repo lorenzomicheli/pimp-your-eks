@@ -29,7 +29,7 @@ spec:
     matchLabels:
       app: efs-provisioner
   strategy:
-    type: Recreate 
+    type: Recreate
   template:
     metadata:
       labels:
@@ -69,4 +69,3 @@ spec:
           nfs:
             server: fs-1f6560d4.efs.eu-west-1.amazonaws.com
             path: /
-...
