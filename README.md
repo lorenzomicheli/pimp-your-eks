@@ -57,6 +57,7 @@ Let's start creating our cluster. To run our containers on AWS Fargate, we need 
 Open a file named `cluster.yaml` where we define, the name of the cluster, the region where our cluster will be deployed, and the Fargate profiles of our choice.
 
 ```yaml
+apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
