@@ -12,6 +12,7 @@
   - [Prometheus](#Prometheus)
   - [Grafana](#Grafana)
 - [Logging on CloudWatch Logs](#Logging-on-CloudWatch-Logs)
+- [AWS Secrets Manager Integration](#AWS-Secrets-Manager-Integration)
 
 ---
 
@@ -1379,4 +1380,194 @@ After few minutes check on CloudWatch console and you should see the new LogGrou
 
 ```sh
 kubectl apply -f fluentbit-config.yaml,fluentbit-sidecar.yaml
+```
+
+---
+
+## AWS Secrets Manager Integration
+
+Most likely your application needs to use secrets (API keys, database credentials, tokens). By default, Kubernetes does not provide a proper secrets management system so we need to integrate it using an external system.
+
+AWS Secrets Manager is a secrets management system used to store, rotate, monitor, and control access to secrets.
+
+At the time of this writing, there is no integration between EKS and AWS Secrets Manager. Fortunately GoDaddy wrote their own integration and open sourced it on [GitHub](https://github.com/godaddy/kubernetes-external-secrets).
+
+For each secret in AWS Secret Manager, we need to define an `ExternalSecrets`. An External Secrets Controller deployed in our cluster, fetch the secret from AWS Secrets Manager and translate it into a `Secrets` entity. This process is totally transparent to the Pod that can access Secrets normally.
+
+![Alt](/doc/eks-secrets-manager.png "EKS Secrets Manager Integration")
+
+Let’s start creating a new secret in AWS Secret Manager
+
+```
+aws secretsmanager create-secret --region eu-west-1 --name secret-consumer-service/credentials \
+--secret-string '{"username":"admin","password":"1234"}'
+```
+
+Then we define a `scm-iam-policy.json` to allow access to our secrets
+
+```
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetResourcePolicy",
+        "secretsmanager:GetSecretValue",
+        "secretsmanager:DescribeSecret",
+        "secretsmanager:ListSecretVersionIds"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:eu-west-1:608500418044:secret:*"
+      ]
+    }
+  ]
+}
+```
+
+And create the IAM policy
+
+```
+aws iam create-policy --policy-name EKSSecretsManagerIAMPolicy \
+--policy-document file://scm-iam-policy.json
+```
+
+Create a ServiceAccount `secrets-manager-sa.yaml`:
+
+```
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    app.kubernetes.io/name: secrets-manager
+  name: secrets-manager
+  namespace: kube-system
+```
+
+```
+kubectl apply -f secrets-manager-sa.yaml
+```
+
+Create an IAM role for the ALB ingress controller and attach the role to the service account created in the previous step. Change `<ACCOUNT_ID>` with the id of your AWS Account and `<AWS_REGION>` with the region where the cluster has been created:
+
+```
+eksctl create iamserviceaccount --region <AWS_REGION> \
+--name secrets-manager \
+--namespace kube-system \
+--cluster eks-cluster \
+--attach-policy-arn arn:aws:iam::<ACCOUNT_ID>:policy/EKSSecretsManagerIAMPolicy \
+--override-existing-serviceaccounts \
+--approve
+```
+
+Add the kubernetes-external-secrets repo to helm
+
+```
+helm repo add external-secrets https://godaddy.github.io/kubernetes-external-secrets/
+helm repo update
+```
+
+Create a `kubernetes-external-secrets-config.yaml` to configure kubernetes-external-secrets
+
+```
+serviceAccount:
+  create: false
+  name: secrets-manager
+
+env:
+  AWS_REGION: eu-west-1
+
+securityContext:
+  fsGroup: 65534
+```
+
+and deploy kubernetes-external-secrets:
+
+```
+helm install external-secrets external-secrets/kubernetes-external-secrets \
+-f ./kubernetes-external-secrets-config.yaml
+```
+
+Now that we configured kubernetes-external-secret, let’s see how to use it.
+
+We create an `external-secrets.yaml` file to map our ExternalSecrets to the secrets defined in AWS Secrets Manager:
+
+```
+apiVersion: 'kubernetes-client.io/v1'
+kind: ExternalSecret
+metadata:
+  name: secret-consumer-service
+spec:
+
+  backendType: secretsManager
+  # optional: specify role to assume when retrieving the data
+  # roleArn: arn:aws:iam::608500418044:role/example-eks-service-account-secrets-role
+  data:
+    - key: secret-consumer-service/credentials
+      name: password
+      property: password
+    - key: secret-consumer-service/credentials
+      name: username
+      property: username
+```
+
+and apply
+
+```
+kubectl apply -f external-secret-service.yaml
+```
+
+You can verify that the secrets has been correctly imported running:
+
+```
+kubectl get secret secret-consumer-service -o=yaml
+```
+
+We create a test pod `secrets-consumer-pod.yaml` that logs our secrets on standard output (do not do this in production code). It reads the Secrets username and password from `secret-consumer-service` and it maps them with two environment variables to be used by our application:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: secrets-consumer
+spec:
+
+  containers:
+  - name: secrets-consumer
+    image: busybox
+    args:
+    - /bin/sh
+    - -c
+    - >
+      while true;
+      do
+        echo "Username: $SECRET_USERNAME";
+        echo "Password: $SECRET_PASSWORD";
+        sleep 60;
+      done
+    env:
+      - name: SECRET_USERNAME
+        valueFrom:
+          secretKeyRef:
+            name: secret-consumer-service
+            key: username
+      - name: SECRET_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: secret-consumer-service
+            key: password
+  restartPolicy: Never
+```
+
+Apply it:
+
+```
+kubectl apply -f secrets-consumer-pod.yaml
+```
+
+If you check the logs, you should see the secrets:
+
+```
+secrets-consumer Username: admin
+secrets-consumer Password: 1234
 ```
