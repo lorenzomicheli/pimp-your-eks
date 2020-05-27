@@ -1405,7 +1405,7 @@ aws secretsmanager create-secret --region eu-west-1 --name secret-consumer-servi
 
 Then we define a `scm-iam-policy.json` to allow access to our secrets
 
-```
+```json
 {
   "Version": "2012-10-17",
   "Statement": [
@@ -1417,9 +1417,7 @@ Then we define a `scm-iam-policy.json` to allow access to our secrets
         "secretsmanager:DescribeSecret",
         "secretsmanager:ListSecretVersionIds"
       ],
-      "Resource": [
-        "arn:aws:secretsmanager:eu-west-1:608500418044:secret:*"
-      ]
+      "Resource": ["arn:aws:secretsmanager:eu-west-1:608500418044:secret:*"]
     }
   ]
 }
@@ -1434,7 +1432,7 @@ aws iam create-policy --policy-name EKSSecretsManagerIAMPolicy \
 
 Create a ServiceAccount `secrets-manager-sa.yaml`:
 
-```
+```yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -1469,7 +1467,7 @@ helm repo update
 
 Create a `kubernetes-external-secrets-config.yaml` to configure kubernetes-external-secrets
 
-```
+```yaml
 serviceAccount:
   create: false
   name: secrets-manager
@@ -1492,16 +1490,13 @@ Now that we configured kubernetes-external-secret, let’s see how to use it.
 
 We create an `external-secrets.yaml` file to map our ExternalSecrets to the secrets defined in AWS Secrets Manager:
 
-```
-apiVersion: 'kubernetes-client.io/v1'
+```yaml
+apiVersion: "kubernetes-client.io/v1"
 kind: ExternalSecret
 metadata:
   name: secret-consumer-service
 spec:
-
   backendType: secretsManager
-  # optional: specify role to assume when retrieving the data
-  # roleArn: arn:aws:iam::608500418044:role/example-eks-service-account-secrets-role
   data:
     - key: secret-consumer-service/credentials
       name: password
@@ -1525,37 +1520,36 @@ kubectl get secret secret-consumer-service -o=yaml
 
 We create a test pod `secrets-consumer-pod.yaml` that logs our secrets on standard output (do not do this in production code). It reads the Secrets username and password from `secret-consumer-service` and it maps them with two environment variables to be used by our application:
 
-```
+```yaml
 apiVersion: v1
 kind: Pod
 metadata:
   name: secrets-consumer
 spec:
-
   containers:
-  - name: secrets-consumer
-    image: busybox
-    args:
-    - /bin/sh
-    - -c
-    - >
-      while true;
-      do
-        echo "Username: $SECRET_USERNAME";
-        echo "Password: $SECRET_PASSWORD";
-        sleep 60;
-      done
-    env:
-      - name: SECRET_USERNAME
-        valueFrom:
-          secretKeyRef:
-            name: secret-consumer-service
-            key: username
-      - name: SECRET_PASSWORD
-        valueFrom:
-          secretKeyRef:
-            name: secret-consumer-service
-            key: password
+    - name: secrets-consumer
+      image: busybox
+      args:
+        - /bin/sh
+        - -c
+        - >
+          while true;
+          do
+            echo "Username: $SECRET_USERNAME";
+            echo "Password: $SECRET_PASSWORD";
+            sleep 60;
+          done
+      env:
+        - name: SECRET_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: secret-consumer-service
+              key: username
+        - name: SECRET_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: secret-consumer-service
+              key: password
   restartPolicy: Never
 ```
 
